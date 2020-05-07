@@ -17,7 +17,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(cors())
 
 const login = async (request, response, next) => {
-  var user = messageProvider.connect(request.body)
+  const user = messageProvider.connect(request.body)
   request.data = user;
   next()
 }
@@ -29,13 +29,13 @@ const login = async (request, response, next) => {
 // }
 
 const getMessages = async (request, response, next) => {
-  var messages = await messageProvider.getMessages(request.query)
+  const messages = await messageProvider.getMessages(request.query)
   request.data = messages;
   next()
 }
 
 const postMessage = async (request, response, next) => {
-  var message = await messageProvider.postMessage(request.body)
+  const message = await messageProvider.postMessage(request.body)
   request.data = message;
   next()
 }
@@ -48,9 +48,10 @@ app.post('/login', login, (req, res) => {
   res.status(200).json(req.data)
 });
 
-app.post('/logoff', login, (req, res) => {
-  res.status(204);
-});
+// TO DO
+// app.post('/logoff', login, (req, res) => {
+//   res.status(204);
+// });
 
 app.post('/messages', postMessage, (req, res) => {
   res.status(200);

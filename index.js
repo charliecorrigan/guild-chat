@@ -2,41 +2,64 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const cors = require('cors')
 const { pool } = require('./config')
-
 const app = express()
+const PostgresClient = require('./postgresClient');
+const MessageProvider = require('./messageProvider');
+
+const http = require('http').Server(app);
+const io = require('socket.io')(http);
+
+const pgClient = new PostgresClient(pool);
+const messageProvider = new MessageProvider(pgClient, io);
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(cors())
 
-const getUsers = (request, response) => {
-  pool.query('SELECT * FROM users', (error, results) => {
-    if (error) {
-      throw error
-    }
-    response.status(200).json(results.rows)
-  })
+const login = async (request, response, next) => {
+  var user = messageProvider.connect(request.body)
+  request.data = user;
+  next()
 }
 
-const addUser = (request, response) => {
-  const { userName, socketId } = request.body
+// const logoff = async (request, response, next) => {
+//   // delete Socket id from user record
+//   messageProvider.disconnect(request.body)
+//   next()
+// }
 
-  pool.query('INSERT INTO books (userName, socketId) VALUES ($1, $2)', [userName, socketId], error => {
-    if (error) {
-      throw error
-    }
-    response.status(201).json({ status: 'success', message: 'User added.' })
-  })
+const getMessages = async (request, response, next) => {
+  var messages = await messageProvider.getMessages(request.query)
+  request.data = messages;
+  next()
 }
 
-app
-  .route('/users')
-  // GET endpoint
-  .get(getUsers)
-  // POST endpoint
-  .post(addUser)
+const postMessage = async (request, response, next) => {
+  var message = await messageProvider.postMessage(request.body)
+  request.data = message;
+  next()
+}
 
-// Start server
-app.listen(process.env.PORT || 3002, () => {
-  console.log(`Server listening`)
-})
+app.get('/', function(req, res) {
+  res.sendFile(__dirname + '/index.html');
+});
+
+app.post('/login', login, (req, res) => {
+  res.status(200).json(req.data)
+});
+
+app.post('/logoff', login, (req, res) => {
+  res.status(204);
+});
+
+app.post('/messages', postMessage, (req, res) => {
+  res.status(200);
+});
+
+app.get('/messages', getMessages, (req, res) => {
+  res.status(200).json(req.data)
+});
+
+http.listen(process.env.PORT || 3000, function() {
+  console.log(`listening on ${process.env.PORT || 3000}`);
+});

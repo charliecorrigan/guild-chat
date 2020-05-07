@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Guild Education Chat App</title>
+  </head>
+  <script src = "/socket.io/socket.io.js"></script>
+
+  <script>
+    const socket = io();
+    let socketId;
+    socket.on('connect', () => {
+      socketId = socket.id;
+    });
+
+    socket.on('chatMessage', function(data){
+      const element = document.createElement("p");
+        element.appendChild(document.createTextNode(`${data.sender}: ${data.content}`));
+        log.appendChild(element);
+    });
+
+    function onLoad(callback) {
+      if (document.readyState !== 'loading') {
+        callback();
+      } else if (document.addEventListener) {
+        document.addEventListener('DOMContentLoaded', callback);
+      } else {
+        document.attachEvent('onreadystatechange', function() {
+          if (document.readyState === 'complete') {
+            callback();
+          }
+        });
+      }
+    }
+
+    onLoad(function() {
+      const messageInput = document.getElementById("message");
+      const senderInput = document.getElementById("sender");
+      const recipientInput = document.getElementById("recipient");
+      const chatForm = document.getElementById("chatForm");
+      const chatSubmit = document.getElementById("chatSubmit");
+      const loginForm = document.getElementById("loginForm");
+      const loginSubmit = document.getElementById("loginSubmit");
+      const userNameInput = document.getElementById("userName");
+      const log = document.getElementById("log");
+
+      chatSubmit.addEventListener("click", function(event) {
+        event.preventDefault();
+        sendMessage()
+
+        const element = document.createElement("p");
+        element.appendChild(document.createTextNode(`Me: ${messageInput.value}`));
+        log.appendChild(element);
+        messageInput.value = "";
+      });
+
+      loginSubmit.addEventListener("click", function(event) {
+        event.preventDefault();
+        login()
+        chatForm.style.display = '';
+        loginForm.style.display = 'none';
+        senderInput.value = userNameInput.value;
+      });
+
+      async function login() {
+        try {
+          const response = await fetch(
+            '/login',
+            {
+              method: 'POST',
+              body: JSON.stringify({ socketId: socketId, userName: userNameInput.value }),
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              referrer: 'no-referrer'
+            }
+          )
+        } catch (error) {
+          console.log(error)
+        }
+      }
+
+      async function sendMessage() {
+        const newMessage = {
+          content: messageInput.value,
+          sender: senderInput.value,
+          recipient: recipientInput.value
+        }
+        try {
+          const response = await fetch(
+            '/messages',
+            {
+              method: 'POST',
+              body: JSON.stringify(newMessage),
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              referrer: 'no-referrer'
+            }
+          )
+        } catch (error) {
+          console.log(error)
+        }
+      }
+    });
+  </script>
+
+  <body>
+    <form id="loginForm">
+      <h1>Guild Education Chat</h1>
+      <fieldset>
+        <label for="userName">Login As: </label>
+        <input type="text" id="userName" name="userName" />
+      </fieldset>
+      <input type="submit" id="loginSubmit" value="Login"></input>
+    </form>
+
+    <form id="chatForm" style="display:none">
+      <fieldset>
+        <label for="sender">From: </label>
+        <input type="text" id="sender" name="sender" />
+      </fieldset>
+      <fieldset>
+        <label for="recipient">To: </label>
+        <input type="text" id="recipient" name="recipient" placeholder="Enter Existing User"/>
+      </fieldset>
+      <fieldset>
+        <label for="message">Message: </label>
+        <input type="text" id="message" name="message" />
+      </fieldset>
+      <input type="submit" id="chatSubmit" value="Send"></input>
+    </form>
+    <div id="log"></div>
+  </body>
+</html>
